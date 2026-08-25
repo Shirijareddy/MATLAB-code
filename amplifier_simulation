@@ -1,0 +1,106 @@
+clc;
+clear;
+close all;
+
+%% Amplifier Input-Output Characteristics
+
+% Input voltage
+Vin = linspace(-1,1,1000);
+
+% Amplifier gain
+Av = 5;
+
+% Ideal linear output
+Vout_linear = Av * Vin;
+
+% Nonlinear amplifier output
+% 2nd and 3rd order distortion terms
+a2 = 0.5;
+a3 = 0.8;
+
+Vout_nonlinear = Av*Vin + a2*Vin.^2 + a3*Vin.^3;
+
+%% Plot Input-Output Characteristics
+
+figure;
+plot(Vin,Vout_linear,'LineWidth',2);
+hold on;
+plot(Vin,Vout_nonlinear,'--','LineWidth',2);
+grid on;
+
+xlabel('Input Voltage (V)');
+ylabel('Output Voltage (V)');
+title('Amplifier Input-Output Characteristics');
+legend('Ideal Linear Amplifier','Nonlinear Amplifier');
+
+%% Calculate Linearity Error
+
+linearity_error = Vout_nonlinear - Vout_linear;
+
+figure;
+plot(Vin,linearity_error,'LineWidth',2);
+grid on;
+
+xlabel('Input Voltage (V)');
+ylabel('Linearity Error (V)');
+title('Amplifier Linearity Error');
+
+%% Distortion Analysis
+
+% Input sinusoidal signal
+t = linspace(0,0.02,2000);
+f = 1000;
+
+Vin_sine = 0.2*sin(2*pi*f*t);
+
+% Amplifier output with nonlinear distortion
+Vout_sine = Av*Vin_sine + ...
+            a2*Vin_sine.^2 + ...
+            a3*Vin_sine.^3;
+
+%% Plot Input and Output Waveforms
+
+figure;
+plot(t,Vin_sine,'LineWidth',1.5);
+hold on;
+plot(t,Vout_sine,'LineWidth',1.5);
+grid on;
+
+xlabel('Time (s)');
+ylabel('Voltage (V)');
+title('Amplifier Input and Output Waveforms');
+legend('Input Signal','Output Signal');
+
+%% Calculate THD
+
+% Remove DC component
+Vout_ac = Vout_sine - mean(Vout_sine);
+
+% FFT
+N = length(Vout_ac);
+Y = fft(Vout_ac);
+P = abs(Y/N);
+P = P(1:floor(N/2)+1);
+
+% Fundamental frequency bin
+[~,fund_bin] = max(P);
+
+% Fundamental amplitude
+A1 = P(fund_bin);
+
+% Harmonic components
+harmonics = [];
+
+for k = 2:5
+    bin = (fund_bin-1)*k + 1;
+    if bin <= length(P)
+        harmonics(end+1) = P(bin);
+    end
+end
+
+% Total Harmonic Distortion
+THD = sqrt(sum(harmonics.^2))/A1 * 100;
+
+fprintf('Amplifier Gain = %.2f\n',Av);
+fprintf('Maximum Linearity Error = %.4f V\n',max(abs(linearity_error)));
+fprintf('THD = %.2f %%\n',THD);
